@@ -1,8 +1,8 @@
 [package]
 name = "tickets"
-version = "0.6.1"
+version = "0.7.0"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["doubaobn"]
 license = ""
 repository = ""
 edition = "2021"
@@ -24,6 +24,11 @@ regex = "1.8.4"
 md5 = "0.7"
 subscription-proxy-pool = "0.1.0"
 ua_generator = { version = "0.5.78", default-features = false }
+
+# 扫码登录窗口需要直接调用 WebView2 的接口读取 Cookie
+[target."cfg(windows)".dependencies]
+webview2-com = "0.19.1"
+windows = "0.39"
 
 [dependencies.tauri-plugin-sql]
 git = "https://github.com/tauri-apps/plugins-workspace"

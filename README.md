@@ -2,6 +2,8 @@
 
 基于 **Tauri + Rust + Vue 3** 的多平台购票工作台，支持 **大麦 H5** 与 **Bilibili 会员购**。
 
+作者：小胖（[@doubaobn](https://github.com/doubaobn)）· 小胖出品，必属废品
+
 左侧切换平台，分别填写账号与活动信息。等待开售、购票重试与取消由 Rust 后端管理，切换页面不影响已启动的任务。
 
 本项目用于技术学习与交流，请合理使用，勿用于商业代抢。
@@ -16,6 +18,7 @@
 - **自动校时**：优先请求淘宝公共时间接口，失败时使用 Bilibili 时间接口；多次采样选取往返耗时最小的结果，自动填写修正值并显示估计误差。
 - **订单处理**：凭证失效后重新准备订单；验证、限购、重复订单等情况停止并提示处理。下单响应无法确认时提示检查官方订单，避免盲目重试。
 - **统一账号**：按平台管理多个账号及 Cookie，设置默认账号；购票与监控共用，旧版已保存凭证自动迁入。
+- **扫码登录**：大麦账号可在应用内打开官方登录窗口扫码或密码登录，自动读取完整 Cookie（含 `_m_h5_tk`）；Cookie 未过期但令牌失效时一键续期，无需重新登录。
 - **记录与设置**：实时任务状态、成功提示音、SQLite 操作日志、按平台/日期/关键词筛选、导出、全局代理和运行标识。
 - **界面配色**：四套预设、浅色/深色模式，以及全局与 Bilibili 独立主色；即时预览，保存后自动恢复。
 - **订阅代理**：使用 `subscription-proxy-pool = "0.1.0"` 管理多个订阅、刷新节点、自动轮换或固定节点，兼容原有手动代理地址。
@@ -23,7 +26,7 @@
 
 ## 下载
 
-前往 [Releases](https://github.com/shiyutim/tickets/releases) 选择对应系统的安装包。新功能以当前源码为准，已发布安装包可能尚未包含。
+前往 [Releases](https://github.com/doubaobn/tickets/releases) 选择对应系统的安装包。新功能以当前源码为准，已发布安装包可能尚未包含。
 
 ## 本地运行
 
@@ -55,7 +58,7 @@ npm run tauri build
 
 ## 使用
 
-1. 在 **设置与帮助 → 账号与 Cookie** 中选择平台并添加账号。用浏览器登录对应平台，在活动页面的开发者工具 Network 中找到接口请求，复制 Request Headers 中的完整 Cookie。大麦使用 H5 页面，Cookie 需要包含 `_m_h5_tk`；Bilibili 需要包含 `SESSDATA` 和 `bili_jct`。
+1. 在 **设置与帮助 → 账号与 Cookie** 中选择平台并添加账号。用浏览器登录对应平台，在活动页面的开发者工具 Network 中找到接口请求，复制 Request Headers 中的完整 Cookie。大麦使用 H5 页面，Cookie 需要包含 `_m_h5_tk`；Bilibili 需要包含 `SESSDATA` 和 `bili_jct`。Windows 桌面版也可直接点击 **扫码登录**，在应用内打开官方登录页，登录成功后自动填入完整 Cookie，无需手工复制。
 2. 保存账号后回到大麦或 Bilibili 工作台，选择已保存账号，粘贴官方活动链接或直接填写项目编号，点击 **加载活动**。未指定账号时自动选用该平台默认账号。
 3. 选择场次与票档，再选择与购买张数一致的观演人。Bilibili 还需填写联系人、电话；需配送的票档选择收货地址。观演人与地址需预先在官方平台添加。
 4. 按需启用 **定时开始**。开售时间会自动带入，日期输入统一按**北京时间（UTC+8）**解释。
@@ -132,6 +135,7 @@ npm run tauri build
 
 ## 更新记录
 
+- 新增开屏动画，大麦账号支持应用内扫码登录与 `_m_h5_tk` 一键续期。
 - 新增自定义配色和深色模式，接入订阅代理管理，统一接口随机 UA，并使预约任务固定所选代理。
 - 新增 Bilibili 会员购，更新商品详情、订单准备与 `createV2` 链路，支持有效订单编号确认和官方支付入口。
 - 重做工作台界面，新增独立平台标签、任务记录页与设置帮助页。
@@ -140,4 +144,4 @@ npm run tauri build
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=shiyutim/tickets&type=Date)](https://star-history.com/#shiyutim/tickets&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=doubaobn/tickets&type=Date)](https://star-history.com/#doubaobn/tickets&Date)

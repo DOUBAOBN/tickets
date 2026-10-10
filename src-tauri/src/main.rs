@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
-use tickets::{bilibili, clock, dm, notifications, subscriptions, tasks, utils, version};
+use tickets::{bilibili, clock, dm, login, notifications, subscriptions, tasks, utils, version};
 
 fn main() {
     tauri::Builder::default()
@@ -22,6 +22,9 @@ fn main() {
             dm::dm_project,
             dm::dm_tickets,
             dm::dm_buyers,
+            login::dm_login,
+            login::dm_login_check,
+            login::dm_refresh_token,
             bilibili::bili_search,
             bilibili::bili_project,
             bilibili::bili_buyers,

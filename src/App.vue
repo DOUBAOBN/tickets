@@ -3,6 +3,7 @@ import { onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { Message } from "@arco-design/web-vue";
 import UiIcon from "./components/common/UiIcon.vue";
+import SplashScreen from "./components/SplashScreen.vue";
 import { activeTasks, activeMonitors, runtime, desktop, initializeRuntime, errorText, openExternal } from "./services/runtime";
 const route = useRoute();
 const version = appVersion;
@@ -35,7 +36,7 @@ onMounted(() => initializeRuntime().catch(error => Message.error(errorText(error
             <div class="sidebar-bottom">
                 <div class="sidebar-note"><span class="live-dot" :class="{ muted: !activeTasks.length }"></span>{{ activeTasks.length ? `${activeTasks.length} 个任务运行中` : "准备好下一场相遇" }}<small>保持应用运行，等待好消息。</small></div>
                 <router-link to="/settings" class="nav-item" :class="{ selected: route.path === '/settings' }"><UiIcon name="settings" /><span>设置与帮助</span></router-link>
-                <button class="sidebar-footer" @click="openExternal('https://github.com/shiyutim/tickets')"><UiIcon name="github" /><span>开源共建</span><span>v{{ version }}</span></button>
+                <button class="sidebar-footer" @click="openExternal('https://github.com/doubaobn')"><UiIcon name="github" /><span>小胖出品</span><span>v{{ version }}</span></button>
             </div>
         </aside>
         <main class="main-shell">
@@ -48,4 +49,5 @@ onMounted(() => initializeRuntime().catch(error => Message.error(errorText(error
             </div>
         </main>
     </div>
+    <SplashScreen />
 </template>

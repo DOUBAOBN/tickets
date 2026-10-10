@@ -9,7 +9,7 @@ pub async fn get_repo_release() -> Result<serde_json::Value, String> {
         .map_err(|_| "无法初始化更新连接")?;
     let release = crate::http::json(
         client
-            .get("https://api.github.com/repos/shiyutim/tickets/releases/latest")
+            .get("https://api.github.com/repos/doubaobn/tickets/releases/latest")
             .header(reqwest::header::ACCEPT, "application/vnd.github+json"),
     )
     .await

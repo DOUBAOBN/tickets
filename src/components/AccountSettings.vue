@@ -1,7 +1,7 @@
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, reactive, ref } from "vue";
 import { Message } from "@arco-design/web-vue";
-import { runtime, saveAccount, deleteAccount, setDefaultAccount, reloadAccounts, errorText } from "../services/runtime";
+import { runtime, call, desktop, saveAccount, deleteAccount, setDefaultAccount, reloadAccounts, errorText } from "../services/runtime";
 import { platforms, formatTime } from "../services/platforms";
 import UiIcon from "./common/UiIcon.vue";
 
@@ -10,14 +10,81 @@ const accounts = computed(() => runtime.accounts.items.filter(item => item.platf
 const form = reactive({ id: "", name: "", cookie: "" });
 const showCookie = ref(false);
 const error = ref("");
-function reset() { Object.assign(form, { id: "", name: "", cookie: "" }); showCookie.value = false; error.value = ""; }
+const loginWaiting = ref(false);
+const loginBusy = ref(false);
+const loginMessage = ref("");
+const loginFailed = ref(false);
+const refreshing = ref(false);
+let loginTimer;
+let loginGeneration = 0;
+function reset() { Object.assign(form, { id: "", name: "", cookie: "" }); showCookie.value = false; error.value = ""; stopLogin(); }
 function selectPlatform(id) { platform.value = id; reset(); }
-function edit(account) { Object.assign(form, { id: account.id, name: account.name, cookie: account.cookie }); showCookie.value = false; error.value = ""; }
+function edit(account) { Object.assign(form, { id: account.id, name: account.name, cookie: account.cookie }); showCookie.value = false; error.value = ""; stopLogin(); }
+function stopLogin(message = "", failed = false) {
+    loginGeneration++;
+    clearTimeout(loginTimer);
+    loginWaiting.value = false;
+    loginBusy.value = false;
+    loginMessage.value = message;
+    loginFailed.value = failed;
+}
+async function readLogin() {
+    if (loginBusy.value) return;
+    const current = loginGeneration;
+    loginBusy.value = true;
+    try {
+        const state = await call("dm_login_check");
+        if (current !== loginGeneration) return;
+        if (state.ready) {
+            form.cookie = state.cookie;
+            showCookie.value = false;
+            error.value = "";
+            stopLogin("已读取登录凭证，填写账号名称后点下方按钮保存。");
+            Message.success("已获取大麦登录凭证");
+            return;
+        }
+        if (loginWaiting.value) loginTimer = setTimeout(readLogin, 2000);
+    } catch (value) {
+        if (current !== loginGeneration) return;
+        stopLogin(errorText(value), true);
+    } finally {
+        if (current === loginGeneration) loginBusy.value = false;
+    }
+}
+async function startLogin() {
+    if (!desktop || loginWaiting.value || loginBusy.value) return;
+    error.value = "";
+    stopLogin();
+    try {
+        await call("dm_login");
+        loginWaiting.value = true;
+        loginMessage.value = "已打开大麦登录窗口，扫码或登录成功后会自动填入 Cookie；窗口关闭前可随时点「我已登录，读取 Cookie」。";
+        loginTimer = setTimeout(readLogin, 1500);
+    } catch (value) { stopLogin(errorText(value), true); }
+}
+function resumeLogin() {
+    if (!desktop || loginBusy.value) return;
+    loginWaiting.value = true;
+    clearTimeout(loginTimer);
+    readLogin();
+}
+function cancelLogin() { stopLogin("已停止等待。登录窗口仍然可用，可直接关闭，或稍后再点「我已登录，读取 Cookie」。"); }
+async function refreshToken() {
+    if (refreshing.value || !form.cookie.trim()) return;
+    error.value = "";
+    refreshing.value = true;
+    try {
+        form.cookie = await call("dm_refresh_token", { account: { cookie: form.cookie } });
+        Message.success("已刷新 _m_h5_tk，请点击保存");
+    } catch (value) { error.value = errorText(value); }
+    finally { refreshing.value = false; }
+}
 function save() {
     error.value = "";
     try { saveAccount({ ...form, platform: platform.value }); reset(); Message.success("账号已保存，购票和监控可直接选用"); }
     catch (value) { error.value = errorText(value); }
 }
+onBeforeUnmount(() => { loginGeneration++; clearTimeout(loginTimer); });
 function remove(id) {
     try { deleteAccount(id); if (form.id === id) reset(); Message.success("账号已删除"); }
     catch (value) { error.value = errorText(value); }
@@ -44,8 +111,15 @@ function makeDefault(id) {
         <form @submit.prevent="save">
             <div class="label-row"><h3>{{ form.id ? '更新账号' : '添加账号' }}</h3><button v-if="form.id" type="button" class="text-button" @click="reset">取消编辑</button></div>
             <div class="field space-top"><label class="field-label" for="account-name">账号名称</label><input id="account-name" class="text-input" v-model="form.name" maxlength="60" placeholder="例如：我的常用账号" autocomplete="off" /></div>
-            <div class="label-row space-top"><label class="field-label" for="account-cookie">账号 Cookie</label><button type="button" class="text-button" @click="showCookie = !showCookie">{{ showCookie ? '隐藏' : '显示' }}</button></div>
-            <textarea id="account-cookie" class="text-input cookie-input" :class="{ concealed: !showCookie }" rows="4" v-model="form.cookie" placeholder="粘贴已登录账号的完整 Cookie" autocomplete="off" spellcheck="false"></textarea>
+            <div class="label-row space-top"><label class="field-label" for="account-cookie">账号 Cookie</label><div class="account-actions"><button v-if="platform === 'dm'" type="button" class="text-button" :disabled="!desktop || refreshing || !form.cookie.trim()" @click="refreshToken">{{ refreshing ? '刷新中…' : '刷新 _m_h5_tk' }}</button><button type="button" class="text-button" @click="showCookie = !showCookie">{{ showCookie ? '隐藏' : '显示' }}</button></div></div>
+            <textarea id="account-cookie" class="text-input cookie-input" :class="{ concealed: !showCookie }" rows="4" v-model="form.cookie" placeholder="粘贴已登录账号的完整 Cookie，或点下方「扫码登录」自动获取" autocomplete="off" spellcheck="false"></textarea>
+            <div v-if="platform === 'dm'" class="login-row">
+                <button type="button" class="button secondary small" :disabled="!desktop || loginWaiting || loginBusy" @click="startLogin">{{ loginWaiting ? '等待登录中…' : '扫码登录' }}</button>
+                <button type="button" class="button secondary small" :disabled="!desktop || loginBusy" @click="resumeLogin">我已登录，读取 Cookie</button>
+                <button v-if="loginWaiting" type="button" class="text-button" @click="cancelLogin">停止等待</button>
+            </div>
+            <p v-if="loginMessage" :class="loginFailed ? 'inline-error' : 'field-hint'" role="status">{{ loginMessage }}</p>
+            <p v-if="platform === 'dm'" class="field-hint">「扫码登录」会打开大麦官方登录页，登录成功后自动填入完整 Cookie（含 _m_h5_tk），凭证只保存在本机。Cookie 未过期但提示缺少 _m_h5_tk 时，点「刷新 _m_h5_tk」续期即可，不必重新登录。</p>
             <p class="field-hint">Cookie 以明文保存在当前设备的统一账号库中。账号单独保存，无需再点击页面顶部的保存设置。保存只检查格式，登录是否有效以平台查询结果为准。</p>
             <p class="field-hint">更新或删除账号后，已启动的任务继续使用启动时的 Cookie；新查询和新任务使用当前账号。Cookie 过期时，在这里更新一次即可。</p>
             <p v-if="error" class="inline-error" role="alert">{{ error }}</p>
@@ -63,5 +137,6 @@ function makeDefault(id) {
 .account-description .pill { margin-left: 8px; }
 .account-description small { display: block; color: var(--muted); font-size: 10px; line-height: 1.7; margin-top: 6px; }
 .account-actions { display: flex; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.login-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 @media (max-width: 700px) { .account-row { align-items: flex-start; flex-direction: column; } }
 </style>

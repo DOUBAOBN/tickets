@@ -4719,7 +4719,7 @@ dependencies = [
 
 [[package]]
 name = "tickets"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "base64 0.21.2",
  "md5",
@@ -4734,6 +4734,8 @@ dependencies = [
  "tokio",
  "ua_generator",
  "uuid",
+ "webview2-com",
+ "windows 0.39.0",
 ]
 
 [[package]]
