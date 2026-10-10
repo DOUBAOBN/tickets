@@ -18,7 +18,8 @@ function loadScript(src) {
     });
 }
 
-export async function damaiCredentials() {
+// 指纹由当前页面环境算出，请求必须带上同一个环境的 User-Agent，否则两边对不上。
+export async function damaiCredentials(userAgent = globalThis.navigator?.userAgent ?? "") {
     if (!baxiaReady) {
         baxiaReady = (async () => {
             await loadScript("https://g.alicdn.com/??/AWSC/AWSC/awsc.js,/sd/baxia-entry/baxiaCommon.js");
@@ -33,7 +34,7 @@ export async function damaiCredentials() {
         if (module) {
             const ua = module.getFYToken();
             const umidtoken = module.getUidToken();
-            if (ua && umidtoken) return { ua, umidtoken };
+            if (ua && umidtoken) return { ua, umidtoken, userAgent };
         }
         await new Promise(resolve => setTimeout(resolve, 100));
     }

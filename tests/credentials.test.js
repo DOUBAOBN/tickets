@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { biliCredentials } from "../src/services/credentials.js";
+import { biliCredentials, damaiCredentials } from "../src/services/credentials.js";
 
 test("Bilibili credentials use the user agent supplied for the current request", t => {
     t.mock.method(Date, "now", () => 1_700_000_000_000);
@@ -18,4 +18,18 @@ test("Bilibili credentials use the user agent supplied for the current request",
     assert.deepEqual(first, repeated);
     assert.notEqual(first.ctoken, changed.ctoken);
     assert.equal(Buffer.from(first.ctoken, "base64").length, 32);
+});
+
+test("Damai credentials carry the user agent of the page that produced the fingerprint", async t => {
+    globalThis.window = { addEventListener() {} };
+    globalThis.document = {
+        createElement: () => ({ set src(value) { queueMicrotask(() => this.onload?.()); } }),
+        head: { appendChild() {} },
+    };
+    globalThis.window.baxiaCommon = { init() {} };
+    globalThis.window.__baxia__ = { getFYModule: { getFYToken: () => "fy-token", getUidToken: () => "device-token" } };
+    t.after(() => { delete globalThis.window; delete globalThis.document; });
+
+    const credentials = await damaiCredentials("page-agent");
+    assert.deepEqual(credentials, { ua: "fy-token", umidtoken: "device-token", userAgent: "page-agent" });
 });

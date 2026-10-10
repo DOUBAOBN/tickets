@@ -82,8 +82,20 @@ impl Damai {
             query.push(("data", &data));
             self.client.get(url).query(&query)
         };
-        http::json(request).await
+        match credential_user_agent(credentials) {
+            Some(agent) => http::json_with_user_agent(request, agent).await,
+            None => http::json(request).await,
+        }
     }
+}
+
+/// 指纹是在某个页面环境里算出来的，请求必须带上同一个环境的 UA，
+/// 否则同一发请求里会同时出现两个互相矛盾的身份。
+fn credential_user_agent(credentials: Option<&Value>) -> Option<&str> {
+    credentials
+        .and_then(|credentials| credentials["userAgent"].as_str())
+        .map(str::trim)
+        .filter(|agent| !agent.is_empty())
 }
 
 fn result(response: &Value) -> Result<Value, String> {
@@ -417,5 +429,24 @@ mod tests {
         assert!(hierarchy["structure"].get("order_1").is_some());
         assert!(hierarchy["structure"].get("unrelated").is_none());
         assert!(order_payload(&detail, &["missing".into()], 1).is_err());
+    }
+
+    #[test]
+    fn order_requests_reuse_the_user_agent_behind_the_fingerprint() {
+        let credentials = json!({
+            "ua": "fy-token",
+            "umidtoken": "device-token",
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+        });
+        assert_eq!(
+            credential_user_agent(Some(&credentials)),
+            Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0")
+        );
+        assert_eq!(credential_user_agent(None), None);
+        assert_eq!(credential_user_agent(Some(&json!({ "ua": "fy" }))), None);
+        assert_eq!(
+            credential_user_agent(Some(&json!({ "userAgent": "   " }))),
+            None
+        );
     }
 }
